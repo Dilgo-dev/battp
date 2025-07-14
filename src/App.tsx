@@ -19,6 +19,7 @@ const BattpApp = () => {
     createNewRequest,
     selectRequest,
     updateSelectedRequest,
+    deleteRequest,
     getSelectedRequest,
     getCurrentFormData,
     favorites,
@@ -36,8 +37,16 @@ const BattpApp = () => {
     selectRequest(requestId);
   };
 
+  const handleDeleteRequest = (requestId: number) => {
+    deleteRequest(requestId);
+  };
+
   const handleFormChange = (field: keyof RequestFormData, value: any) => {
     updateSelectedRequest(field, value);
+  };
+
+  const handleUpdateRequestName = (newName: string) => {
+    updateSelectedRequest('name', newName);
   };
 
   const handleSendRequest = () => {
@@ -69,6 +78,7 @@ const BattpApp = () => {
             requests={savedRequests}
             selectedRequestId={selectedRequestId}
             onSelectRequest={handleSelectRequest}
+            onDeleteRequest={handleDeleteRequest}
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             favorites={favorites}
@@ -79,6 +89,7 @@ const BattpApp = () => {
             selectedRequest={selectedRequest}
             formData={formData}
             onFormChange={handleFormChange}
+            onUpdateRequestName={handleUpdateRequestName}
             onSendRequest={handleSendRequest}
             isLoading={isLoading}
           />

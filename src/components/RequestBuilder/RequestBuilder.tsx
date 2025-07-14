@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Zap } from 'lucide-react';
+import { Zap, Edit2, Check, X } from 'lucide-react';
 import { HttpRequest, TabType, RequestFormData } from '../../types';
 import { RequestForm } from './RequestForm';
 import { HeadersTab } from './HeadersTab';
@@ -10,6 +10,7 @@ interface RequestBuilderProps {
   selectedRequest: HttpRequest | null;
   formData: RequestFormData | null;
   onFormChange: (field: keyof RequestFormData, value: any) => void;
+  onUpdateRequestName: (newName: string) => void;
   onSendRequest: () => void;
   isLoading: boolean;
 }
@@ -18,12 +19,42 @@ export const RequestBuilder = ({
   selectedRequest, 
   formData, 
   onFormChange, 
+  onUpdateRequestName,
   onSendRequest, 
   isLoading 
 }: RequestBuilderProps) => {
   const [activeTab, setActiveTab] = useState<TabType>("headers");
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState("");
 
   const isSendDisabled = !selectedRequest || !formData?.url.trim() || isLoading;
+
+  const handleStartEdit = () => {
+    if (selectedRequest) {
+      setEditedName(selectedRequest.name);
+      setIsEditingName(true);
+    }
+  };
+
+  const handleSaveEdit = () => {
+    if (editedName.trim()) {
+      onUpdateRequestName(editedName.trim());
+      setIsEditingName(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingName(false);
+    setEditedName("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col">
@@ -32,9 +63,47 @@ export const RequestBuilder = ({
           <Zap size={20} className="text-accent" />
           <span>REQUEST BUILDER</span>
           {selectedRequest && (
-            <span className="text-sm text-muted-foreground">
-              - {selectedRequest.name}
-            </span>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-muted-foreground">-</span>
+              {isEditingName ? (
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleSaveEdit}
+                    className="text-sm bg-background border border-border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSaveEdit}
+                    className="p-1 hover:bg-accent/10 rounded"
+                    title="Save"
+                  >
+                    <Check size={12} className="text-success" />
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="p-1 hover:bg-accent/10 rounded"
+                    title="Cancel"
+                  >
+                    <X size={12} className="text-destructive" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleStartEdit}
+                  className="flex items-center space-x-1 hover:bg-accent/10 rounded px-1 py-0.5 group"
+                  title="Edit request name"
+                >
+                  <span className="text-sm text-muted-foreground">
+                    {selectedRequest.name}
+                  </span>
+                  <Edit2 size={12} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              )}
+            </div>
           )}
         </h2>
         

@@ -8,6 +8,7 @@ interface SidebarProps {
   requests: HttpRequest[];
   selectedRequestId: number | null;
   onSelectRequest: (requestId: number) => void;
+  onDeleteRequest: (requestId: number) => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
   favorites: HttpRequest[];
@@ -18,6 +19,7 @@ export const Sidebar = ({
   requests, 
   selectedRequestId, 
   onSelectRequest, 
+  onDeleteRequest,
   searchTerm, 
   onSearchChange, 
   favorites, 
@@ -38,6 +40,7 @@ export const Sidebar = ({
           requests={requests} 
           selectedRequestId={selectedRequestId} 
           onSelectRequest={onSelectRequest} 
+          onDeleteRequest={onDeleteRequest}
         />
 
         {/* Favorites */}
