@@ -38,3 +38,25 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 export type TabType = 'headers' | 'body' | 'params';
 
 export type ResponseTabType = 'body' | 'headers';
+
+export interface Workspace {
+  id: string;
+  name: string;
+  createdAt: string;
+  syncPath?: string;
+}
+
+export interface WorkspaceData {
+  workspaces: Workspace[];
+  currentWorkspaceId: string;
+  requestsByWorkspace: Record<string, HttpRequest[]>;
+  selectedRequestIdByWorkspace: Record<string, number | null>;
+}
+
+export interface WorkspaceFile {
+  name: string;
+  requests: HttpRequest[];
+  selectedRequestId: number | null;
+  createdAt: string;
+  version: string;
+}

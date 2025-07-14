@@ -1,7 +1,8 @@
-import { FileText, Star, Clock } from 'lucide-react';
-import { HttpRequest } from '../../types';
+import { Star, Clock } from 'lucide-react';
+import { HttpRequest, Workspace } from '../../types';
 import { SearchBar } from './SearchBar';
 import { RequestsList } from './RequestsList';
+import { WorkspaceSelector } from './WorkspaceSelector';
 import { getMethodColor } from '../../utils/helpers';
 
 interface SidebarProps {
@@ -13,6 +14,12 @@ interface SidebarProps {
   onSearchChange: (term: string) => void;
   favorites: HttpRequest[];
   recent: HttpRequest[];
+  workspaces: Workspace[];
+  currentWorkspace: Workspace | null;
+  onSwitchWorkspace: (workspaceId: string) => void;
+  onCreateWorkspace: () => void;
+  onRenameWorkspace: (workspaceId: string, newName: string) => void;
+  onDeleteWorkspace: (workspaceId: string) => void;
 }
 
 export const Sidebar = ({ 
@@ -23,15 +30,27 @@ export const Sidebar = ({
   searchTerm, 
   onSearchChange, 
   favorites, 
-  recent 
+  recent,
+  workspaces,
+  currentWorkspace,
+  onSwitchWorkspace,
+  onCreateWorkspace,
+  onRenameWorkspace,
+  onDeleteWorkspace
 }: SidebarProps) => {
   return (
     <div className="w-80 border-r border-border flex flex-col">
       <div className="p-4 border-b border-border">
-        <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center space-x-2">
-          <FileText size={20} />
-          <span>SAVED REQUESTS</span>
-        </h2>
+        <div className="mb-3">
+          <WorkspaceSelector
+            workspaces={workspaces}
+            currentWorkspace={currentWorkspace}
+            onSwitchWorkspace={onSwitchWorkspace}
+            onCreateWorkspace={onCreateWorkspace}
+            onRenameWorkspace={onRenameWorkspace}
+            onDeleteWorkspace={onDeleteWorkspace}
+          />
+        </div>
         <SearchBar searchTerm={searchTerm} onSearchChange={onSearchChange} />
       </div>
 
