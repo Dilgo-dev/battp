@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import {
   Search,
   Plus,
@@ -26,6 +27,21 @@ const BattpApp = () => {
   const [responseTab, setResponseTab] = useState("body");
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // États pour la requête HTTP
+  const [isLoading, setIsLoading] = useState(false);
+  const [response, setResponse] = useState(null);
+  const [error, setError] = useState(null);
+  const [headers, setHeaders] = useState({
+    "Content-Type": "application/json",
+    "Authorization": "Bearer your-token-here"
+  });
+  const [body, setBody] = useState('{\n  "name": "Dick Grayson",\n  "email": "dick@wayneenterprises.com",\n  "role": "Assistant"\n}');
+  const [params, setParams] = useState({
+    page: "1",
+    limit: "10",
+    sort: "name"
+  });
 
   const savedRequests = [
     {
@@ -70,35 +86,54 @@ const BattpApp = () => {
   const favorites = savedRequests.filter((req) => req.favorite);
   const recent = savedRequests.slice(0, 3);
 
-  const mockResponse = {
-    status: 200,
-    statusText: "OK",
-    time: 245,
-    size: "1.2KB",
-    body: {
-      users: [
-        {
-          id: 1,
-          name: "Bruce Wayne",
-          email: "bruce@wayneenterprises.com",
-          role: "CEO",
-        },
-        {
-          id: 2,
-          name: "Alfred Pennyworth",
-          email: "alfred@waynemanor.com",
-          role: "Butler",
-        },
-      ],
-      total: 2,
-      page: 1,
-    },
-    headers: {
-      "Content-Type": "application/json",
-      Server: "nginx/1.18.0",
-      "X-RateLimit-Remaining": "99",
-      "X-Response-Time": "245ms",
-    },
+  // Fonction pour envoyer une requête HTTP
+  const sendHttpRequest = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Construire l'URL avec les paramètres de requête
+      let finalUrl = url;
+      if (httpMethod === "GET" && Object.keys(params).length > 0) {
+        const urlObj = new URL(url);
+        Object.entries(params).forEach(([key, value]) => {
+          if (value) {
+            urlObj.searchParams.append(key, value);
+          }
+        });
+        finalUrl = urlObj.toString();
+      }
+      
+      const requestData = {
+        url: finalUrl,
+        method: httpMethod,
+        headers: headers,
+        body: (httpMethod !== "GET" && body) ? body : null,
+      };
+      
+      const result = await invoke("send_http_request", { request: requestData });
+      setResponse(result);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fonction pour formater la taille en bytes
+  const formatSize = (bytes) => {
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  };
+
+  // Fonction pour formater le body JSON
+  const formatResponseBody = (body) => {
+    try {
+      return JSON.stringify(JSON.parse(body), null, 2);
+    } catch {
+      return body;
+    }
   };
 
   const getMethodColor = (method) => {
@@ -302,9 +337,13 @@ const BattpApp = () => {
                   className="flex-1 px-3 py-2 bg-input border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="https://api.example.com/endpoint"
                 />
-                <button className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 flex items-center space-x-2">
+                <button 
+                  onClick={sendHttpRequest}
+                  disabled={isLoading}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 flex items-center space-x-2 disabled:opacity-50"
+                >
                   <Send size={16} />
-                  <span>SEND</span>
+                  <span>{isLoading ? "SENDING..." : "SEND"}</span>
                 </button>
               </div>
 
@@ -334,13 +373,48 @@ const BattpApp = () => {
                     🔧 Headers
                   </h3>
                   <div className="bg-card border border-border rounded-md p-4">
-                    <div className="space-y-2 text-sm font-mono">
-                      <div>Content-Type: application/json</div>
-                      <div>
-                        Authorization: Bearer
-                        eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
-                      </div>
-                      <div>X-API-Key: your-api-key-here</div>
+                    <div className="space-y-3">
+                      {Object.entries(headers).map(([key, value]) => (
+                        <div key={key} className="flex space-x-2">
+                          <input
+                            type="text"
+                            value={key}
+                            onChange={(e) => {
+                              const newHeaders = { ...headers };
+                              delete newHeaders[key];
+                              newHeaders[e.target.value] = value;
+                              setHeaders(newHeaders);
+                            }}
+                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm"
+                            placeholder="Header name"
+                          />
+                          <input
+                            type="text"
+                            value={value}
+                            onChange={(e) => {
+                              setHeaders({ ...headers, [key]: e.target.value });
+                            }}
+                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm"
+                            placeholder="Header value"
+                          />
+                          <button
+                            onClick={() => {
+                              const newHeaders = { ...headers };
+                              delete newHeaders[key];
+                              setHeaders(newHeaders);
+                            }}
+                            className="px-2 py-1 text-red-500 hover:bg-red-500/10 rounded"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => setHeaders({ ...headers, "": "" })}
+                        className="w-full px-2 py-1 border border-dashed border-border rounded text-sm text-muted-foreground hover:border-primary"
+                      >
+                        + Add Header
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -352,11 +426,12 @@ const BattpApp = () => {
                     📦 Body
                   </h3>
                   <div className="bg-card border border-border rounded-md p-4">
-                    <pre className="text-sm text-muted-foreground font-mono">{`{
-  "name": "Dick Grayson",
-  "email": "dick@wayneenterprises.com",
-  "role": "Assistant"
-}`}</pre>
+                    <textarea
+                      value={body}
+                      onChange={(e) => setBody(e.target.value)}
+                      className="w-full h-48 px-3 py-2 bg-input border border-border rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                      placeholder="Enter request body (JSON, XML, etc.)"
+                    />
                   </div>
                 </div>
               )}
@@ -367,10 +442,48 @@ const BattpApp = () => {
                     🔍 Query Params
                   </h3>
                   <div className="bg-card border border-border rounded-md p-4">
-                    <div className="space-y-2 text-sm font-mono">
-                      <div>page: 1</div>
-                      <div>limit: 10</div>
-                      <div>sort: name</div>
+                    <div className="space-y-3">
+                      {Object.entries(params).map(([key, value]) => (
+                        <div key={key} className="flex space-x-2">
+                          <input
+                            type="text"
+                            value={key}
+                            onChange={(e) => {
+                              const newParams = { ...params };
+                              delete newParams[key];
+                              newParams[e.target.value] = value;
+                              setParams(newParams);
+                            }}
+                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm"
+                            placeholder="Parameter name"
+                          />
+                          <input
+                            type="text"
+                            value={value}
+                            onChange={(e) => {
+                              setParams({ ...params, [key]: e.target.value });
+                            }}
+                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm"
+                            placeholder="Parameter value"
+                          />
+                          <button
+                            onClick={() => {
+                              const newParams = { ...params };
+                              delete newParams[key];
+                              setParams(newParams);
+                            }}
+                            className="px-2 py-1 text-red-500 hover:bg-red-500/10 rounded"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => setParams({ ...params, "": "" })}
+                        className="w-full px-2 py-1 border border-dashed border-border rounded text-sm text-muted-foreground hover:border-primary"
+                      >
+                        + Add Parameter
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -388,19 +501,33 @@ const BattpApp = () => {
 
               {/* Status */}
               <div className="flex items-center space-x-4 mb-4">
-                <span
-                  className={`text-sm font-medium ${getStatusColor(
-                    mockResponse.status
-                  )}`}
-                >
-                  Status: {mockResponse.status} {mockResponse.statusText} ✅
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  Time: {mockResponse.time}ms
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  Size: {mockResponse.size}
-                </span>
+                {isLoading && (
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Loading...
+                  </span>
+                )}
+                {error && (
+                  <span className="text-sm font-medium text-destructive">
+                    Error: {error.error || error.message}
+                  </span>
+                )}
+                {response && (
+                  <>
+                    <span
+                      className={`text-sm font-medium ${getStatusColor(
+                        response.status
+                      )}`}
+                    >
+                      Status: {response.status} {response.status_text} {response.status >= 200 && response.status < 300 ? "✅" : "❌"}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      Time: {response.time_ms}ms
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      Size: {formatSize(response.size)}
+                    </span>
+                  </>
+                )}
               </div>
 
               {/* Response Tabs */}
@@ -429,9 +556,26 @@ const BattpApp = () => {
                     📊 Response Body
                   </h3>
                   <div className="bg-muted border border-border rounded-md p-4">
-                    <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap">
-                      {JSON.stringify(mockResponse.body, null, 2)}
-                    </pre>
+                    {isLoading && (
+                      <div className="text-sm text-muted-foreground">
+                        Sending request...
+                      </div>
+                    )}
+                    {error && (
+                      <div className="text-sm text-destructive">
+                        Request failed: {error.details || error.message}
+                      </div>
+                    )}
+                    {response && (
+                      <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap">
+                        {formatResponseBody(response.body)}
+                      </pre>
+                    )}
+                    {!isLoading && !error && !response && (
+                      <div className="text-sm text-muted-foreground">
+                        No response yet. Click SEND to make a request.
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -442,15 +586,32 @@ const BattpApp = () => {
                     🔍 Response Headers
                   </h3>
                   <div className="bg-muted border border-border rounded-md p-4">
-                    <div className="space-y-2 text-sm font-mono">
-                      {Object.entries(mockResponse.headers).map(
-                        ([key, value]) => (
-                          <div key={key} className="text-muted-foreground">
-                            {key}: {value}
-                          </div>
-                        )
-                      )}
-                    </div>
+                    {isLoading && (
+                      <div className="text-sm text-muted-foreground">
+                        Sending request...
+                      </div>
+                    )}
+                    {error && (
+                      <div className="text-sm text-destructive">
+                        Request failed: {error.details || error.message}
+                      </div>
+                    )}
+                    {response && (
+                      <div className="space-y-2 text-sm font-mono">
+                        {Object.entries(response.headers).map(
+                          ([key, value]) => (
+                            <div key={key} className="text-muted-foreground">
+                              {key}: {value}
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+                    {!isLoading && !error && !response && (
+                      <div className="text-sm text-muted-foreground">
+                        No response yet. Click SEND to make a request.
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
