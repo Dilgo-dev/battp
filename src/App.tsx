@@ -20,9 +20,7 @@ import {
 } from "lucide-react";
 
 const BattpApp = () => {
-  const [selectedRequest, setSelectedRequest] = useState(null);
-  const [httpMethod, setHttpMethod] = useState("GET");
-  const [url, setUrl] = useState("https://api.example.com/users");
+  // États pour l'interface
   const [activeTab, setActiveTab] = useState("headers");
   const [responseTab, setResponseTab] = useState("body");
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -32,62 +30,80 @@ const BattpApp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState(null);
   const [error, setError] = useState(null);
+  
+  // États pour la gestion des requêtes
+  const [savedRequests, setSavedRequests] = useState([]);
+  const [selectedRequestId, setSelectedRequestId] = useState(null);
+  const [httpMethod, setHttpMethod] = useState("GET");
+  const [url, setUrl] = useState("");
   const [headers, setHeaders] = useState({
-    "Content-Type": "application/json",
-    "Authorization": "Bearer your-token-here"
+    "Content-Type": "application/json"
   });
-  const [body, setBody] = useState('{\n  "name": "Dick Grayson",\n  "email": "dick@wayneenterprises.com",\n  "role": "Assistant"\n}');
-  const [params, setParams] = useState({
-    page: "1",
-    limit: "10",
-    sort: "name"
-  });
+  const [body, setBody] = useState('');
+  const [params, setParams] = useState({});
 
-  const savedRequests = [
-    {
-      id: 1,
-      name: "Get Users",
+  // Fonction pour créer une nouvelle requête
+  const createNewRequest = () => {
+    const newRequest = {
+      id: Date.now(), // ID unique basé sur le timestamp
+      name: "Untitled Request",
       method: "GET",
-      url: "https://api.example.com/users",
-      collection: "Gotham API",
+      url: "",
+      headers: { "Content-Type": "application/json" },
+      body: "",
+      params: {},
       favorite: false,
-    },
-    {
-      id: 2,
-      name: "Create User",
-      method: "POST",
-      url: "https://api.example.com/users",
-      collection: "Gotham API",
-      favorite: false,
-    },
-    {
-      id: 3,
-      name: "Get Weather",
-      method: "GET",
-      url: "https://api.weather.com/current",
-      collection: "External APIs",
-      favorite: true,
-    },
-  ];
+      createdAt: new Date().toISOString(),
+    };
+    
+    setSavedRequests(prev => [...prev, newRequest]);
+    setSelectedRequestId(newRequest.id);
+    
+    // Charger la nouvelle requête dans l'interface
+    setHttpMethod(newRequest.method);
+    setUrl(newRequest.url);
+    setHeaders(newRequest.headers);
+    setBody(newRequest.body);
+    setParams(newRequest.params);
+  };
 
-  const collections = [
-    {
-      name: "Gotham API",
-      icon: "🦇",
-      requests: ["Get Users", "Create User", "Update User"],
-    },
-    {
-      name: "Wayne Enterprises",
-      icon: "🏢",
-      requests: ["Get Employees", "Payroll API"],
-    },
-  ];
+  // Fonction pour sélectionner une requête existante
+  const selectRequest = (requestId) => {
+    const request = savedRequests.find(req => req.id === requestId);
+    if (request) {
+      setSelectedRequestId(requestId);
+      setHttpMethod(request.method);
+      setUrl(request.url);
+      setHeaders(request.headers);
+      setBody(request.body);
+      setParams(request.params);
+    }
+  };
+
+  // Fonction pour sauvegarder automatiquement les modifications
+  const updateSelectedRequest = (field, value) => {
+    if (selectedRequestId) {
+      setSavedRequests(prev => 
+        prev.map(req => 
+          req.id === selectedRequestId 
+            ? { ...req, [field]: value }
+            : req
+        )
+      );
+    }
+  };
 
   const favorites = savedRequests.filter((req) => req.favorite);
   const recent = savedRequests.slice(0, 3);
 
   // Fonction pour envoyer une requête HTTP
   const sendHttpRequest = async () => {
+    // Vérifier que nous avons une requête sélectionnée et une URL
+    if (!selectedRequestId || !url.trim()) {
+      setError({ error: "Please select a request and enter a URL" });
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
     
@@ -119,6 +135,9 @@ const BattpApp = () => {
       setIsLoading(false);
     }
   };
+
+  // Fonction pour vérifier si le bouton SEND doit être désactivé
+  const isSendDisabled = !selectedRequestId || !url.trim() || isLoading;
 
   // Fonction pour formater la taille en bytes
   const formatSize = (bytes) => {
@@ -172,7 +191,10 @@ const BattpApp = () => {
               </span>
             </div>
             <div className="flex items-center space-x-2">
-              <button className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 flex items-center space-x-1">
+              <button 
+                onClick={createNewRequest}
+                className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 flex items-center space-x-1"
+              >
                 <Plus size={16} />
                 <span>New Request</span>
               </button>
@@ -220,39 +242,52 @@ const BattpApp = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              {/* Collections */}
+              {/* Saved Requests */}
               <div className="p-4">
                 <h3 className="text-sm font-medium text-foreground mb-2 flex items-center space-x-2">
-                  <Folder size={16} />
-                  <span>Collections</span>
+                  <FileText size={16} />
+                  <span>Saved Requests</span>
                 </h3>
                 <div className="space-y-1">
-                  {collections.map((collection, index) => (
-                    <div key={index} className="group">
-                      <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent/10 cursor-pointer">
-                        <FolderOpen
-                          size={16}
-                          className="text-accent-foreground"
-                        />
-                        <span className="text-sm text-foreground">
-                          {collection.icon} {collection.name}
-                        </span>
-                      </div>
-                      <div className="ml-6 space-y-1">
-                        {collection.requests.map((request, reqIndex) => (
-                          <div
-                            key={reqIndex}
-                            className="flex items-center space-x-2 p-1 rounded-md hover:bg-accent/10 cursor-pointer"
-                          >
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="text-sm text-foreground">
-                              {request}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                  {savedRequests.length === 0 ? (
+                    <div className="text-sm text-muted-foreground py-2">
+                      No saved requests yet. Click "New Request" to create one.
                     </div>
-                  ))}
+                  ) : (
+                    savedRequests.map((request) => (
+                      <div
+                        key={request.id}
+                        onClick={() => selectRequest(request.id)}
+                        className={`flex items-center space-x-2 p-2 rounded-md hover:bg-accent/10 cursor-pointer ${
+                          selectedRequestId === request.id ? "bg-accent/20" : ""
+                        }`}
+                      >
+                        <span
+                          className={`text-xs font-medium ${getMethodColor(
+                            request.method
+                          )}`}
+                        >
+                          {request.method}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-foreground truncate">
+                            {request.name}
+                          </div>
+                          {request.url && (
+                            <div className="text-xs text-muted-foreground truncate">
+                              {request.url}
+                            </div>
+                          )}
+                        </div>
+                        {request.favorite && (
+                          <Star
+                            size={12}
+                            className="text-accent-foreground fill-current"
+                          />
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -315,14 +350,31 @@ const BattpApp = () => {
               <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center space-x-2">
                 <Zap size={20} className="text-accent" />
                 <span>REQUEST BUILDER</span>
+                {selectedRequestId && (
+                  <span className="text-sm text-muted-foreground">
+                    - {savedRequests.find(r => r.id === selectedRequestId)?.name}
+                  </span>
+                )}
               </h2>
+              
+              {!selectedRequestId && (
+                <div className="mb-4 p-3 bg-muted border border-border rounded-md">
+                  <p className="text-sm text-muted-foreground">
+                    📝 Please create a new request or select an existing one to get started.
+                  </p>
+                </div>
+              )}
 
               {/* URL Bar */}
               <div className="flex items-center space-x-2 mb-4">
                 <select
                   value={httpMethod}
-                  onChange={(e) => setHttpMethod(e.target.value)}
-                  className="px-3 py-2 bg-card border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  onChange={(e) => {
+                    setHttpMethod(e.target.value);
+                    updateSelectedRequest('method', e.target.value);
+                  }}
+                  disabled={!selectedRequestId}
+                  className="px-3 py-2 bg-card border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                 >
                   <option value="GET">GET</option>
                   <option value="POST">POST</option>
@@ -333,14 +385,18 @@ const BattpApp = () => {
                 <input
                   type="text"
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="flex-1 px-3 py-2 bg-input border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  onChange={(e) => {
+                    setUrl(e.target.value);
+                    updateSelectedRequest('url', e.target.value);
+                  }}
+                  disabled={!selectedRequestId}
+                  className="flex-1 px-3 py-2 bg-input border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   placeholder="https://api.example.com/endpoint"
                 />
                 <button 
                   onClick={sendHttpRequest}
-                  disabled={isLoading}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 flex items-center space-x-2 disabled:opacity-50"
+                  disabled={isSendDisabled}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send size={16} />
                   <span>{isLoading ? "SENDING..." : "SEND"}</span>
@@ -384,17 +440,22 @@ const BattpApp = () => {
                               delete newHeaders[key];
                               newHeaders[e.target.value] = value;
                               setHeaders(newHeaders);
+                              updateSelectedRequest('headers', newHeaders);
                             }}
-                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm"
+                            disabled={!selectedRequestId}
+                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm disabled:opacity-50"
                             placeholder="Header name"
                           />
                           <input
                             type="text"
                             value={value}
                             onChange={(e) => {
-                              setHeaders({ ...headers, [key]: e.target.value });
+                              const newHeaders = { ...headers, [key]: e.target.value };
+                              setHeaders(newHeaders);
+                              updateSelectedRequest('headers', newHeaders);
                             }}
-                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm"
+                            disabled={!selectedRequestId}
+                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm disabled:opacity-50"
                             placeholder="Header value"
                           />
                           <button
@@ -402,16 +463,23 @@ const BattpApp = () => {
                               const newHeaders = { ...headers };
                               delete newHeaders[key];
                               setHeaders(newHeaders);
+                              updateSelectedRequest('headers', newHeaders);
                             }}
-                            className="px-2 py-1 text-red-500 hover:bg-red-500/10 rounded"
+                            disabled={!selectedRequestId}
+                            className="px-2 py-1 text-red-500 hover:bg-red-500/10 rounded disabled:opacity-50"
                           >
                             <Trash2 size={14} />
                           </button>
                         </div>
                       ))}
                       <button
-                        onClick={() => setHeaders({ ...headers, "": "" })}
-                        className="w-full px-2 py-1 border border-dashed border-border rounded text-sm text-muted-foreground hover:border-primary"
+                        onClick={() => {
+                          const newHeaders = { ...headers, "": "" };
+                          setHeaders(newHeaders);
+                          updateSelectedRequest('headers', newHeaders);
+                        }}
+                        disabled={!selectedRequestId}
+                        className="w-full px-2 py-1 border border-dashed border-border rounded text-sm text-muted-foreground hover:border-primary disabled:opacity-50"
                       >
                         + Add Header
                       </button>
@@ -428,8 +496,12 @@ const BattpApp = () => {
                   <div className="bg-card border border-border rounded-md p-4">
                     <textarea
                       value={body}
-                      onChange={(e) => setBody(e.target.value)}
-                      className="w-full h-48 px-3 py-2 bg-input border border-border rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                      onChange={(e) => {
+                        setBody(e.target.value);
+                        updateSelectedRequest('body', e.target.value);
+                      }}
+                      disabled={!selectedRequestId}
+                      className="w-full h-48 px-3 py-2 bg-input border border-border rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none disabled:opacity-50"
                       placeholder="Enter request body (JSON, XML, etc.)"
                     />
                   </div>
@@ -453,17 +525,22 @@ const BattpApp = () => {
                               delete newParams[key];
                               newParams[e.target.value] = value;
                               setParams(newParams);
+                              updateSelectedRequest('params', newParams);
                             }}
-                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm"
+                            disabled={!selectedRequestId}
+                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm disabled:opacity-50"
                             placeholder="Parameter name"
                           />
                           <input
                             type="text"
                             value={value}
                             onChange={(e) => {
-                              setParams({ ...params, [key]: e.target.value });
+                              const newParams = { ...params, [key]: e.target.value };
+                              setParams(newParams);
+                              updateSelectedRequest('params', newParams);
                             }}
-                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm"
+                            disabled={!selectedRequestId}
+                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm disabled:opacity-50"
                             placeholder="Parameter value"
                           />
                           <button
@@ -471,16 +548,23 @@ const BattpApp = () => {
                               const newParams = { ...params };
                               delete newParams[key];
                               setParams(newParams);
+                              updateSelectedRequest('params', newParams);
                             }}
-                            className="px-2 py-1 text-red-500 hover:bg-red-500/10 rounded"
+                            disabled={!selectedRequestId}
+                            className="px-2 py-1 text-red-500 hover:bg-red-500/10 rounded disabled:opacity-50"
                           >
                             <Trash2 size={14} />
                           </button>
                         </div>
                       ))}
                       <button
-                        onClick={() => setParams({ ...params, "": "" })}
-                        className="w-full px-2 py-1 border border-dashed border-border rounded text-sm text-muted-foreground hover:border-primary"
+                        onClick={() => {
+                          const newParams = { ...params, "": "" };
+                          setParams(newParams);
+                          updateSelectedRequest('params', newParams);
+                        }}
+                        disabled={!selectedRequestId}
+                        className="w-full px-2 py-1 border border-dashed border-border rounded text-sm text-muted-foreground hover:border-primary disabled:opacity-50"
                       >
                         + Add Parameter
                       </button>
