@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::time::Instant;
+use std::path::PathBuf;
+use std::fs;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -24,6 +26,25 @@ pub struct HttpResponse {
 pub struct HttpError {
     pub error: String,
     pub details: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SavedRequest {
+    pub id: i64,
+    pub name: String,
+    pub method: String,
+    pub url: String,
+    pub headers: HashMap<String, String>,
+    pub body: String,
+    pub params: HashMap<String, String>,
+    pub favorite: bool,
+    pub created_at: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RequestsData {
+    pub requests: Vec<SavedRequest>,
+    pub selected_request_id: Option<i64>,
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -103,11 +124,61 @@ async fn send_http_request(request: HttpRequest) -> Result<HttpResponse, HttpErr
     }
 }
 
+fn get_requests_file_path() -> Result<PathBuf, String> {
+    let data_dir = dirs::data_dir()
+        .ok_or("Impossible d'obtenir le répertoire de données")?;
+    
+    let app_data_dir = data_dir.join("BATTP");
+    
+    // Créer le répertoire s'il n'existe pas
+    if !app_data_dir.exists() {
+        fs::create_dir_all(&app_data_dir)
+            .map_err(|e| format!("Impossible de créer le répertoire: {}", e))?;
+    }
+    
+    Ok(app_data_dir.join("requests.json"))
+}
+
+#[tauri::command]
+async fn save_requests(requests_data: RequestsData) -> Result<(), String> {
+    let file_path = get_requests_file_path()?;
+    
+    let json_content = serde_json::to_string_pretty(&requests_data)
+        .map_err(|e| format!("Erreur de sérialisation: {}", e))?;
+    
+    fs::write(&file_path, json_content)
+        .map_err(|e| format!("Impossible d'écrire le fichier: {}", e))?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn load_requests() -> Result<RequestsData, String> {
+    let file_path = get_requests_file_path()?;
+    
+    if !file_path.exists() {
+        // Si le fichier n'existe pas, retourner des données vides
+        return Ok(RequestsData {
+            requests: Vec::new(),
+            selected_request_id: None,
+        });
+    }
+    
+    let content = fs::read_to_string(&file_path)
+        .map_err(|e| format!("Impossible de lire le fichier: {}", e))?;
+    
+    let requests_data: RequestsData = serde_json::from_str(&content)
+        .map_err(|e| format!("Erreur de désérialisation: {}", e))?;
+    
+    Ok(requests_data)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, send_http_request])
+        .plugin(tauri_plugin_fs::init())
+        .invoke_handler(tauri::generate_handler![greet, send_http_request, save_requests, load_requests])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
