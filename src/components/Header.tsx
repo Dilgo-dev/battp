@@ -1,4 +1,4 @@
-import { Plus, Upload, Download, Settings } from 'lucide-react';
+import { Plus, Sun, Moon } from 'lucide-react';
 
 interface HeaderProps {
   onNewRequest: () => void;
@@ -25,20 +25,12 @@ export const Header = ({ onNewRequest, onToggleDarkMode, isDarkMode }: HeaderPro
             <Plus size={16} />
             <span>New Request</span>
           </button>
-          <button className="px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 flex items-center space-x-1">
-            <Upload size={16} />
-            <span>Import</span>
-          </button>
-          <button className="px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 flex items-center space-x-1">
-            <Download size={16} />
-            <span>Export</span>
-          </button>
           <button
             onClick={onToggleDarkMode}
             className="px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 flex items-center space-x-1"
           >
-            <Settings size={16} />
-            <span>Settings</span>
+            {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+            <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
           </button>
         </div>
       </div>
