@@ -1,4 +1,4 @@
-# 🦇 Battp - Batman API Client
+# 🦇 Bathttp - Batman API Client
 
 Un client API moderne et intuitif inspiré de l'univers Batman, construit avec React, TypeScript et Tauri pour une expérience desktop native.
 
@@ -20,8 +20,8 @@ Un client API moderne et intuitif inspiré de l'univers Batman, construit avec R
 1. **Clonez le projet**
 
 ```bash
-git clone https://github.com/Dilgo-dev/battp.git
-cd battp
+git clone https://github.com/Dilgo-dev/bathttp.git
+cd bathttp
 ```
 
 2. **Installez les dépendances**
@@ -61,7 +61,7 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
 > _"It's not who I am underneath, but what I do that defines me."_ - Batman
 
-Battp vous aide à définir vos APIs avec style et efficacité.
+Bathttp vous aide à définir vos APIs avec style et efficacité.
 
 ---
 

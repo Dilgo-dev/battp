@@ -9,7 +9,7 @@ import { useWorkspaces } from "./hooks/useWorkspaces";
 import { useHttpClient } from "./hooks/useHttpClient";
 import { RequestFormData } from "./types";
 
-const BattpApp = () => {
+const BathttpApp = () => {
   // États pour l'interface
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -258,4 +258,4 @@ const BattpApp = () => {
   );
 };
 
-export default BattpApp;
+export default BathttpApp;

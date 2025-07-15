@@ -12,7 +12,7 @@ export const Header = ({ onNewRequest, onToggleDarkMode, isDarkMode }: HeaderPro
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="text-2xl">🦇</div>
-          <h1 className="text-2xl font-bold text-primary">BATTP</h1>
+          <h1 className="text-2xl font-bold text-primary">BATHTTP</h1>
           <span className="text-sm text-muted-foreground">
             Batman API Client
           </span>

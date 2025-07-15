@@ -153,7 +153,7 @@ fn get_app_data_dir() -> Result<PathBuf, String> {
     let data_dir = dirs::data_dir()
         .ok_or("Impossible d'obtenir le répertoire de données")?;
     
-    let app_data_dir = data_dir.join("BATTP");
+    let app_data_dir = data_dir.join("BATHTTP");
     
     // Créer le répertoire s'il n'existe pas
     if !app_data_dir.exists() {
