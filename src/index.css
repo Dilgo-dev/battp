@@ -136,4 +136,16 @@
   button {
     cursor: pointer;
   }
+  
+  /* Tauri window drag region */
+  [data-tauri-drag-region] {
+    -webkit-app-region: drag;
+    app-region: drag;
+  }
+  
+  /* Ensure buttons inside drag region are clickable */
+  [data-tauri-drag-region] button {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
 }
