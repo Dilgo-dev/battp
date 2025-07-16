@@ -7,7 +7,7 @@ import { WorkspaceModal } from "./components/Modal/WorkspaceModal";
 import { useRequests } from "./hooks/useRequests";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { useHttpClient } from "./hooks/useHttpClient";
-import { RequestFormData } from "./types";
+import { RequestFormData, HttpRequest } from "./types";
 
 const BathttpApp = () => {
   // États pour l'interface
@@ -89,6 +89,16 @@ const BathttpApp = () => {
     } else {
       // Système classique
       deleteRequest(requestId);
+    }
+  };
+
+  const handleReorderRequests = (reorderedRequests: HttpRequest[]) => {
+    if (isWorkspacesLoaded) {
+      // Mettre à jour l'ordre dans le workspace actuel
+      updateCurrentWorkspaceRequests(reorderedRequests);
+    } else {
+      // Système classique - TODO: implémenter si nécessaire
+      console.log('Reordering not implemented for classic system');
     }
   };
 
@@ -218,6 +228,7 @@ const BathttpApp = () => {
             selectedRequestId={currentSelectedRequestId}
             onSelectRequest={handleSelectRequest}
             onDeleteRequest={handleDeleteRequest}
+            onReorderRequests={handleReorderRequests}
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             favorites={workspaceFavorites}
