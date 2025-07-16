@@ -1,21 +1,38 @@
-import { Star, FileText, Trash2 } from 'lucide-react';
+import { FileText } from 'lucide-react';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { HttpRequest } from '../../types';
-import { getMethodColor } from '../../utils/helpers';
+import { SortableRequestItem } from './SortableRequestItem';
 
 interface RequestsListProps {
   requests: HttpRequest[];
   selectedRequestId: number | null;
   onSelectRequest: (requestId: number) => void;
   onDeleteRequest: (requestId: number) => void;
+  onReorderRequests: (requests: HttpRequest[]) => void;
 }
 
-export const RequestsList = ({ requests, selectedRequestId, onSelectRequest, onDeleteRequest }: RequestsListProps) => {
-  const handleDeleteClick = (e: React.MouseEvent, requestId: number) => {
-    e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this request?')) {
-      onDeleteRequest(requestId);
+export const RequestsList = ({ requests, selectedRequestId, onSelectRequest, onDeleteRequest, onReorderRequests }: RequestsListProps) => {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      const oldIndex = requests.findIndex((request) => request.id === active.id);
+      const newIndex = requests.findIndex((request) => request.id === over.id);
+
+      const newRequests = arrayMove(requests, oldIndex, newIndex);
+      onReorderRequests(newRequests);
     }
   };
+
   return (
     <div className="p-4">
       <h3 className="text-sm font-medium text-foreground mb-2 flex items-center space-x-2">
@@ -28,46 +45,24 @@ export const RequestsList = ({ requests, selectedRequestId, onSelectRequest, onD
             No saved requests yet. Click "New Request" to create one.
           </div>
         ) : (
-          requests.map((request) => (
-            <div
-              key={request.id}
-              onClick={() => onSelectRequest(request.id)}
-              className={`flex items-center space-x-2 p-2 rounded-md hover:bg-accent/10 cursor-pointer group ${
-                selectedRequestId === request.id ? "bg-accent/20" : ""
-              }`}
-            >
-              <span
-                className={`text-xs font-medium ${getMethodColor(request.method)}`}
-              >
-                {request.method}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm text-foreground truncate">
-                  {request.name}
-                </div>
-                {request.url && (
-                  <div className="text-xs text-muted-foreground truncate">
-                    {request.url}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center space-x-1">
-                {request.favorite && (
-                  <Star
-                    size={12}
-                    className="text-accent-foreground fill-current"
-                  />
-                )}
-                <button
-                  onClick={(e) => handleDeleteClick(e, request.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 transition-opacity"
-                  title="Delete request"
-                >
-                  <Trash2 size={12} className="text-destructive" />
-                </button>
-              </div>
-            </div>
-          ))
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            modifiers={[restrictToVerticalAxis]}
+          >
+            <SortableContext items={requests.map(r => r.id)} strategy={verticalListSortingStrategy}>
+              {requests.map((request) => (
+                <SortableRequestItem
+                  key={request.id}
+                  request={request}
+                  isSelected={selectedRequestId === request.id}
+                  onSelectRequest={onSelectRequest}
+                  onDeleteRequest={onDeleteRequest}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     </div>
